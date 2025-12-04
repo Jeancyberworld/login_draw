@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #0f172a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      color: #e5e7eb;
+    }
+    .container {
+      background: #020617;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      width: 320px;
+      text-align: center;
+      border: 1px solid #1e293b;
+    }
+    h2 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+    input {
+      width: 90%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 5px;
+      border: 1px solid #4b5563;
+      background: #020617;
+      color: #e5e7eb;
+    }
+    button {
+      width: 95%;
+      padding: 10px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 15px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    .flash {
+      color: #f97373;
+      margin-bottom: 8px;
+      font-size: 14px;
+      min-height: 20px;
+    }
+    .link {
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    .link a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+    .link a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Log In</h2>
+
+  <div class="flash">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          {{ message }}
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <form method="POST" action="{{ url_for('login') }}">
+    <input name="username" type="text" placeholder="Username" required>
+    <input name="password" type="password" placeholder="Password" required>
+    <button type="submit">Log In</button>
+  </form>
+
+  <div class="link">
+    Don’t have an account?
+    <a href="{{ url_for('signup') }}">Sign up</a>
+  </div>
+</div>
+
+</body>
+</html>
