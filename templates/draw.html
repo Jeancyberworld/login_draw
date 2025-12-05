@@ -1,291 +1,67 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Draw & Paint</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #e5e7eb;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
-    header {
-      padding: 0.75rem 1rem;
-      background: #020617;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #1e293b;
-      font-size: 0.9rem;
-    }
-    header a {
-      color: #f97373;
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-    header a:hover {
-      text-decoration: underline;
-    }
-    .toolbar {
-      display: flex;
-      gap: 1rem;
-      padding: 0.75rem 1rem;
-      background: #020617;
-      border-bottom: 1px solid #1e293b;
-      align-items: center;
-      flex-wrap: wrap;
-      font-size: 0.9rem;
-    }
-    .toolbar label {
-      margin-right: 0.5rem;
-    }
-    .toolbar input[type="color"],
-    .toolbar input[type="range"] {
-      margin-left: 0.25rem;
-    }
-    .toolbar button {
-      padding: 0.4rem 0.8rem;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
-      font-size: 0.85rem;
-    }
-    .clear-btn {
-      background: #f97373;
-      color: #111827;
-      font-weight: bold;
-    }
-    .clear-btn:hover {
-      background: #fb7185;
-    }
-    .save-btn {
-      background: #10b981;
-      color: #022c22;
-      font-weight: bold;
-    }
-    .save-btn:hover {
-      background: #22c55e;
-    }
-    .status {
-      font-size: 0.8rem;
-      opacity: 0.9;
-    }
-    .canvas-wrapper {
-      flex: 1;
-      padding: 0.75rem;
-    }
-    canvas {
-      background: #ffffff;
-      border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-      display: block;
-      margin: 0 auto;
-      max-width: 100%;
-      max-height: 100%;
-    }
-    .color-dot {
-      margin-left: 0.25rem;
-      padding: 0.25rem 0.5rem;
-      border-radius: 999px;
-      border: 1px solid #1e293b;
-      background: #0f172a;
-      color: #e5e7eb;
-      cursor: pointer;
-    }
-    .color-dot:hover {
-      background: #1e293b;
-    }
-  </style>
+    <title>Paint Studio</title>
+    <style>
+        body { text-align: center; font-family: Arial; }
+        #canvas { border: 1px solid black; cursor: crosshair; }
+        #status { color: red; font-weight: bold; margin-left: 10px; }
+    </style>
 </head>
 <body>
-  <header>
-    <div>
-      <strong>Welcome, {{ username }}!</strong> · Paint Studio 🎨
-    </div>
-    <div>
-      <a href="{{ url_for('logout') }}">Logout</a>
-    </div>
-  </header>
 
-  <div class="toolbar">
-    <div>
-      <label>
-        Color:
-        <input type="color" id="colorPicker" value="#000000">
-      </label>
-    </div>
+<h2>Welcome, {{ session['username'] }}! - Paint Studio 🎨</h2>
 
-    <div>
-      <span>Quick colors:</span>
-      <button type="button" class="color-dot" data-color="#000000">Black</button>
-      <button type="button" class="color-dot" data-color="#ff0000">Red</button>
-      <button type="button" class="color-dot" data-color="#00aaff">Blue</button>
-      <button type="button" class="color-dot" data-color="#00c853">Green</button>
-    </div>
+<a href="/logout">Logout</a>
+<br><br>
 
-    <div>
-      <label>
-        Brush:
-        <input type="range" id="brushSize" min="1" max="40" value="5">
-        <span id="brushSizeValue">5</span> px
-      </label>
-    </div>
+<canvas id="canvas" width="800" height="400"></canvas>
+<br><br>
 
-    <button class="clear-btn" id="clearCanvas">Clear</button>
-    <button class="save-btn" id="saveDrawing">Save</button>
-    <span class="status" id="saveStatus"></span>
-  </div>
+<button onclick="saveDrawing()">Save</button>
+<span id="status"></span>
 
-  <div class="canvas-wrapper">
-    <canvas id="drawingCanvas" width="1000" height="600"></canvas>
-  </div>
-
-  <script>
-    const canvas = document.getElementById('drawingCanvas');
-    const ctx = canvas.getContext('2d');
-
-    const colorPicker = document.getElementById('colorPicker');
-    const brushSize = document.getElementById('brushSize');
-    const brushSizeValue = document.getElementById('brushSizeValue');
-    const clearBtn = document.getElementById('clearCanvas');
-    const saveBtn = document.getElementById('saveDrawing');
-    const saveStatus = document.getElementById('saveStatus');
-    const colorDots = document.querySelectorAll('.color-dot');
-
+<script>
+    let canvas = document.getElementById("canvas");
+    let ctx = canvas.getContext("2d");
     let drawing = false;
-    let lastX = 0;
-    let lastY = 0;
 
-    // Update brush size text
-    brushSize.addEventListener('input', () => {
-      brushSizeValue.textContent = brushSize.value;
-    });
+    canvas.addEventListener("mousedown", () => drawing = true);
+    canvas.addEventListener("mouseup", () => drawing = false);
+    canvas.addEventListener("mousemove", draw);
 
-    // Quick color buttons
-    colorDots.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const chosen = btn.getAttribute('data-color');
-        colorPicker.value = chosen;
-      });
-    });
+    function draw(event) {
+        if (!drawing) return;
 
-    function getPos(e) {
-      const rect = canvas.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      return [clientX - rect.left, clientY - rect.top];
+        ctx.fillStyle = "black";
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+
+        ctx.lineTo(event.offsetX, event.offsetY);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(event.offsetX, event.offsetY);
     }
 
-    function startDrawing(e) {
-      drawing = true;
-      [lastX, lastY] = getPos(e);
-    }
+    function saveDrawing() {
+        const dataURL = canvas.toDataURL();  // convert drawing to base64 string
 
-    function stopDrawing() {
-      drawing = false;
-      ctx.beginPath();
-    }
-
-    function draw(e) {
-      if (!drawing) return;
-      const [x, y] = getPos(e);
-
-      ctx.strokeStyle = colorPicker.value;
-      ctx.lineWidth = brushSize.value;
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-
-      [lastX, lastY] = [x, y];
-    }
-
-    // Mouse events
-    canvas.addEventListener('mousedown', startDrawing);
-    canvas.addEventListener('mouseup', stopDrawing);
-    canvas.addEventListener('mouseout', stopDrawing);
-    canvas.addEventListener('mousemove', draw);
-
-    // Touch events
-    canvas.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      startDrawing(e);
-    });
-    canvas.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      stopDrawing();
-    });
-    canvas.addEventListener('touchcancel', (e) => {
-      e.preventDefault();
-      stopDrawing();
-    });
-    canvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      draw(e);
-    });
-
-    // Clear button
-    clearBtn.addEventListener('click', () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    });
-
-    // Save drawing
-    saveBtn.addEventListener('click', async () => {
-      const dataURL = canvas.toDataURL('image/png');
-      saveStatus.textContent = 'Saving...';
-
-      try {
-        const res = await fetch('/save_drawing', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageData: dataURL })
+        fetch("/draw", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: "drawing=" + encodeURIComponent(dataURL)
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("status").innerText = data.message;
+            document.getElementById("status").style.color = "green";
+        })
+        .catch(() => {
+            document.getElementById("status").innerText = "Error saving.";
         });
-
-        if (res.ok) {
-          saveStatus.textContent = 'Saved!';
-        } else {
-          saveStatus.textContent = 'Error saving.';
-        }
-      } catch (err) {
-        console.error(err);
-        saveStatus.textContent = 'Network error.';
-      }
-
-      setTimeout(() => {
-        saveStatus.textContent = '';
-      }, 2000);
-    });
-
-    // Load saved drawing when page loads
-    async function loadDrawing() {
-      try {
-        const res = await fetch('/get_drawing');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.imageData) {
-          const img = new Image();
-          img.onload = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0);
-          };
-          img.src = data.imageData;
-        }
-      } catch (err) {
-        console.error('Error loading drawing', err);
-      }
     }
+</script>
 
-    loadDrawing();
-  </script>
 </body>
 </html>
