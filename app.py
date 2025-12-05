@@ -5,29 +5,35 @@ import os
 
 app = Flask(__name__)
 
-# Secret key from Render
+# ==========================================================
+# SECRET KEY (from Render)
+# ==========================================================
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "dev_key")
 
-# FIX FOR RENDER — database must be inside /tmp
+# ==========================================================
+# DATABASE — Render allows writing ONLY in /tmp/
+# ==========================================================
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
 # ==========================================================
-# Database Model
+# USER MODEL
 # ==========================================================
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
 
-# Create DB automatically on Render
+# ==========================================================
+# CREATE DB ON STARTUP
+# ==========================================================
 with app.app_context():
     db.create_all()
 
 # ==========================================================
-# Routes
+# ROUTES
 # ==========================================================
 
 @app.route("/")
@@ -36,18 +42,23 @@ def home():
         return redirect(url_for("draw"))
     return redirect(url_for("login"))
 
+# ----------------------------------------------------------
+# SIGNUP
+# ----------------------------------------------------------
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
 
-        # Check if username already exists
+        # Check if user already exists
         user = User.query.filter_by(username=username).first()
         if user:
             return "Username already exists."
 
-        hashed = generate_password_hash(password, method="sha256")
+        # FIXED HASH METHOD — REQUIRED BY WERKZEUG
+        hashed = generate_password_hash(password, method="pbkdf2:sha256")
+
         new_user = User(username=username, password=hashed)
         db.session.add(new_user)
         db.session.commit()
@@ -56,6 +67,9 @@ def signup():
 
     return render_template("signup.html")
 
+# ----------------------------------------------------------
+# LOGIN
+# ----------------------------------------------------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -72,6 +86,9 @@ def login():
 
     return render_template("login.html")
 
+# ----------------------------------------------------------
+# DRAW PAGE
+# ----------------------------------------------------------
 @app.route("/draw", methods=["GET", "POST"])
 def draw():
     if "username" not in session:
@@ -83,10 +100,16 @@ def draw():
 
     return render_template("draw.html")
 
+# ----------------------------------------------------------
+# LOGOUT
+# ----------------------------------------------------------
 @app.route("/logout")
 def logout():
     session.pop("username", None)
     return redirect(url_for("login"))
 
+# ==========================================================
+# RUN (local use only — Render ignores this)
+# ==========================================================
 if __name__ == "__main__":
     app.run(debug=True)
